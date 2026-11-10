@@ -50,10 +50,47 @@ button:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 9px 
 .create-modal .section-head{position:sticky;top:-24px;background:#14243b;padding:8px 0 14px;z-index:2}
 #createPanel .field input,#createPanel .field select{width:100%}
 @media(max-width:600px){.create-backdrop{padding:8px}.create-modal{max-height:calc(100dvh - 16px);padding:14px}#createPanel .actions button{flex:1 1 100%}}
+
+.top{position:relative;min-height:58px;padding-inline-start:4px}
+.stats-menu{position:absolute;left:0;top:0;z-index:50}
+.stats-toggle{white-space:nowrap;min-height:44px;padding:10px 18px;border-color:#3b5b83;background:linear-gradient(135deg,#1b3150,#12233b);color:#eaf2ff}
+.stats-toggle:hover{border-color:#5c9bff}
+.stats-popover{position:absolute;left:0;top:54px;width:min(720px,calc(100vw - 28px));padding:16px;border:1px solid #3a587f;border-radius:18px;background:linear-gradient(145deg,#172943,#0a1527);box-shadow:0 24px 70px #000b;z-index:100}
+.stats-popover.hidden{display:none!important}
+.stats-popover-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
+.stats-popover .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));margin:8px 0}
+.stats-popover .summary-card{padding:12px}
+.stats-popover .summary-card strong{font-size:25px}
+.stats-popover #codesStats{margin:8px 0 0!important}
+@media(max-width:600px){
+ .top{min-height:58px;padding-bottom:0}
+ .stats-menu{left:0;top:0}
+ .stats-toggle{font-size:13px;padding:9px 12px}
+ .stats-popover{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 76px);width:auto;max-height:70vh;overflow:auto}
+}
+
 </style>
 </head>
 <body><main class="wrap">
-<header class="top"><div class="brand">✦ دروسك <span>بلس</span></div><button id="logout" class="secondary hidden" onclick="logout()">تسجيل الخروج</button></header>
+<header class="top">
+ <div class="brand">✦ دروسك <span>بلس</span></div>
+ <div class="stats-menu">
+  <button type="button" id="statsToggle" class="secondary stats-toggle" aria-expanded="false" aria-controls="statsPopover" onclick="toggleStats()">▦ الإحصائيات</button>
+  <div id="statsPopover" class="stats-popover hidden">
+   <div class="stats-popover-head"><b>إحصائيات الأكواد</b><button type="button" class="secondary" onclick="toggleStats(false)">إغلاق ✕</button></div>
+   <div class="summary-grid" id="summaryGrid">
+ <div class="summary-card total"><span>إجمالي الأكواد</span><strong id="sumTotal">0</strong><small>كل الأكواد المسجلة</small></div>
+ <div class="summary-card active"><span>أكواد نشطة</span><strong id="sumActive">0</strong><small>اشتراكات سارية</small></div>
+ <div class="summary-card soon"><span>أقل من 7 أيام</span><strong id="sumSoon">0</strong><small>تحتاج متابعة وتجديد</small></div>
+ <div class="summary-card expired"><span>أكواد منتهية</span><strong id="sumExpired">0</strong><small>انتهى تاريخ الاشتراك</small></div>
+ <div class="summary-card paused"><span>أكواد موقوفة</span><strong id="sumPaused">0</strong><small>موقوفة يدويًا</small></div>
+</div>
+<div id="codesStats" class="small" style="margin:8px 0"></div>
+
+  </div>
+ </div>
+ <button id="logout" class="secondary hidden" onclick="logout()">تسجيل الخروج</button>
+</header>
 <section class="panel" id="loginPanel"><h1>دخول إدارة الأكواد</h1><p class="muted">سجّل بحساب الإدارة المعتمد لفتح لوحة إنشاء الأكواد.</p>
 <div class="grid"><div class="field"><label>اسم المستخدم</label><input id="username" type="text" autocomplete="username" placeholder="اسم المستخدم"></div><div class="field"><label>كلمة المرور</label><input id="password" type="password" autocomplete="current-password" placeholder="كلمة المرور"></div></div>
 <div class="actions"><button onclick="loginEmail()">تسجيل الدخول</button></div><div id="loginMsg" class="msg"></div>
@@ -76,25 +113,9 @@ button:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 9px 
  <div class="field"><label for="filterSection">فلترة حسب الشعبة</label><select id="filterSection" onchange="renderCodes()"><option value="">كل الشعب</option><option>علمي علوم</option><option>علمي رياضة</option><option>أدبي</option><option>أزهر</option><option>بكالوريا</option></select></div>
  <div class="field"><label for="filterStatus">فلترة حسب الحالة</label><select id="filterStatus" onchange="renderCodes()"><option value="">كل الحالات</option><option value="active">نشط</option><option value="paused">موقوف</option><option value="expired">منتهي</option></select></div>
 </div>
-<div class="summary-grid" id="summaryGrid">
- <div class="summary-card total"><span>إجمالي الأكواد</span><strong id="sumTotal">0</strong><small>كل الأكواد المسجلة</small></div>
- <div class="summary-card active"><span>أكواد نشطة</span><strong id="sumActive">0</strong><small>اشتراكات سارية</small></div>
- <div class="summary-card soon"><span>أقل من 7 أيام</span><strong id="sumSoon">0</strong><small>تحتاج متابعة وتجديد</small></div>
- <div class="summary-card expired"><span>أكواد منتهية</span><strong id="sumExpired">0</strong><small>انتهى تاريخ الاشتراك</small></div>
- <div class="summary-card paused"><span>أكواد موقوفة</span><strong id="sumPaused">0</strong><small>موقوفة يدويًا</small></div>
-</div>
-<div id="codesStats" class="small" style="margin:8px 0"></div>
 <div class="tablewrap"><table><thead><tr><th>الكود</th><th>الطالب</th><th>الشعبة</th><th>الأجهزة</th><th>مدة الاشتراك</th><th>الأيام المتبقية</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="codesList"><tr><td colspan="8">اضغط تحديث القائمة.</td></tr></tbody></table></div><div id="listMsg" class="msg"></div>
-<div class="panel bulk-panel" style="margin:18px 0 0;padding:16px">
- <h3 style="margin-top:0">إيقاف مجموعة أكواد</h3>
- <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));align-items:end">
-  <div class="field"><label for="bulkDuration">مدة الأكواد المراد إيقافها</label><select id="bulkDuration"><option value="">اختر المدة</option><option value="trial30">التجريبي (30 دقيقة)</option><option value="30">الشهر (30 يومًا)</option><option value="90">90 يومًا</option><option value="180">6 أشهر</option><option value="365">السنة</option><option value="term">الترم</option><option value="unlimited">بدون تاريخ انتهاء</option><option value="custom">المدد المخصصة</option></select></div>
-  <div class="field"><label for="bulkSection">الشعبة (اختياري)</label><select id="bulkSection"><option value="">كل الشعب</option><option>علمي علوم</option><option>علمي رياضة</option><option>أدبي</option><option>أزهر</option><option>بكالوريا</option></select></div>
-  <div class="field"><button class="danger" type="button" onclick="bulkDeactivate()">إيقاف الأكواد المطابقة</button></div>
- </div><div id="bulkMsg" class="msg">اختر المدة، ويمكنك تحديد شعبة معينة أو تركها لكل الشعب.</div>
-</div></div>
+
 </section>
-<p class="small">تنبيه أمني: تسجيل حد الأجهزة بشكل مضمون ضد التلاعب يحتاج قواعد Firebase محكمة أو تحققًا موثوقًا من جهة الخادم. هذه الصفحة تحفظ إعداد الحد في سجل الكود، ولا تعتبر وحدها قفلًا أمنيًا نهائيًا حتى يتم ربط صفحة دخول الطالب بعملية حجز الجهاز والتحقق منها.</p>
 </main>
 <div id="editModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="editTitle">
  <section class="modal">
@@ -107,7 +128,7 @@ button:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 9px 
    <div class="field"><label>تجديد المدة</label><select id="editDuration"><option value="keep">الاحتفاظ بتاريخ الانتهاء الحالي</option><option value="trial30">30 دقيقة تجريبي</option><option value="30">30 يومًا</option><option value="90">90 يومًا</option><option value="180">180 يومًا</option><option value="365">365 يومًا</option><option value="term">حتى 1/1/2027</option><option value="custom">مدة مخصصة بالأيام</option><option value="unlimited">بدون انتهاء</option></select></div>
    <div class="field hidden" id="editCustomWrap"><label>عدد الأيام</label><input id="editCustomDays" type="number" min="1" value="30"></div>
   </div>
-  <div class="modal-section"><div class="status-row"><b>حالة الكود:</b><span id="editStatus"></span><button id="editToggleBtn" type="button" class="secondary" onclick="toggleEditStatus()">إيقاف الكود</button></div><div class="actions"><button type="button" onclick="saveEdit()">حفظ التعديلات وتجديد الكود</button><button type="button" class="secondary" onclick="closeEditModal()">إلغاء</button></div></div>
+  <div class="modal-section"><div class="status-row"><b>حالة الكود:</b><span id="editStatus"></span><button id="editToggleBtn" type="button" class="secondary" onclick="toggleEditStatus()">إيقاف الكود</button></div><div class="actions"><button type="button" onclick="saveEdit()">حفظ التعديلات وتجديد الكود</button><button type="button" class="danger" onclick="deleteEditingCode()">حذف الكود نهائيًا</button><button type="button" class="secondary" onclick="closeEditModal()">إلغاء</button></div></div>
   <div class="modal-section"><h2>الأجهزة المسجلة</h2><p class="small">يمكنك إلغاء جهاز منفرد؛ عندها يستطيع الطالب تسجيل الدخول من جهاز آخر إذا كان هناك مكان متاح.</p><div id="editDevices" class="device-list"></div><div class="actions"><button type="button" class="danger" onclick="removeAllDevices()">إلغاء جميع الأجهزة</button></div></div>
   <div id="editMsg" class="msg"></div>
  </section>
@@ -150,6 +171,19 @@ function toggleCreatePanel(show){
   document.body.style.overflow="";
  }
 }
+
+function toggleStats(force){
+ const pop=$("statsPopover"),btn=$("statsToggle");
+ const open=typeof force==="boolean"?force:pop.classList.contains("hidden");
+ pop.classList.toggle("hidden",!open);
+ btn.setAttribute("aria-expanded",open?"true":"false");
+}
+document.addEventListener("click",e=>{
+ const menu=document.querySelector(".stats-menu");
+ if(menu&&!menu.contains(e.target))toggleStats(false);
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")toggleStats(false)});
+
 function updateSummary(){const now=Date.now();let active=0,expired=0,soon=0,paused=0;allCodeRows.forEach(([code,x])=>{const exp=Number(x.expiresAt||0),isExpired=exp>0&&exp<=now,isPaused=x.active===false&&!isExpired;if(isExpired)expired++;else if(isPaused)paused++;else{active++;if(exp>0&&exp-now<=7*86400000)soon++}});$("sumTotal").textContent=allCodeRows.length;$("sumActive").textContent=active;$("sumSoon").textContent=soon;$("sumExpired").textContent=expired;$("sumPaused").textContent=paused}
 function makeCode(){let n="";for(let i=0;i<9;i++)n+=Math.floor(Math.random()*10);$("code").value=n}
 function toggleCustom(){$("customWrap").classList.toggle("hidden",v("duration")!=="custom")}
@@ -252,5 +286,17 @@ function renderEditDevices(devices){let entries=Object.entries(devices||{});$("e
 async function toggleEditStatus(){if(!editingCode)return;try{editingActive=!editingActive;await db.ref("students/"+editingCode).update({active:editingActive,status:editingActive?"نشط":"موقوف",updatedAt:Date.now()});renderEditStatus();msg("editMsg",editingActive?"تم تفعيل الكود.":"تم إيقاف الكود.");}catch(e){editingActive=!editingActive;renderEditStatus();msg("editMsg",e.message,true)}}
 async function removeDevice(encoded){if(!editingCode)return;let id=decodeURIComponent(encoded);if(!confirm("إلغاء تسجيل هذا الجهاز؟"))return;try{await db.ref("students/"+editingCode+"/registeredDevices/"+id).remove();let s=await db.ref("students/"+editingCode+"/registeredDevices").get();renderEditDevices(s.val()||{});msg("editMsg","تم إلغاء الجهاز.")}catch(e){msg("editMsg",e.message,true)}}
 async function removeAllDevices(){if(!editingCode||!confirm("هل تريد إلغاء جميع الأجهزة المسجلة لهذا الكود؟"))return;try{await db.ref("students/"+editingCode+"/registeredDevices").remove();renderEditDevices({});msg("editMsg","تم إلغاء جميع الأجهزة.")}catch(e){msg("editMsg",e.message,true)}}
+
+async function deleteEditingCode(){
+ if(!editingCode)return;
+ const code=editingCode;
+ if(!confirm("تأكيد حذف الكود "+code+" نهائيًا من قاعدة البيانات؟ لا يمكن التراجع عن هذا الإجراء."))return;
+ try{
+  await db.ref("students/"+code).remove();
+  msg("listMsg","تم حذف الكود نهائيًا من قاعدة البيانات.");
+  closeEditModal();
+  await loadCodes();
+ }catch(e){msg("editMsg",e.message||String(e),true)}
+}
 async function saveEdit(){try{if(!editingCode)throw Error("لا يوجد كود محدد.");let name=v("editName"),section=v("editSection"),max=Number(v("editMaxDevices"));if(!name)throw Error("اكتب اسم الطالب.");if(!["علمي علوم","علمي رياضة","أدبي","أزهر","بكالوريا"].includes(section))throw Error("الشعبة غير صحيحة.");if(!Number.isInteger(max)||max<1||max>20)throw Error("عدد الأجهزة يجب أن يكون من 1 إلى 20.");let duration=v("editDuration"),expiresAt;if(duration==="keep"){let old=(await db.ref("students/"+editingCode+"/expiresAt").get()).val();expiresAt=Number(old||0)}else if(duration==="trial30")expiresAt=Date.now()+1800000;else if(duration==="term")expiresAt=new Date(2027,0,1,23,59,59,999).getTime();else if(duration==="unlimited")expiresAt=0;else{let days=duration==="custom"?Number(v("editCustomDays")):Number(duration);if(!Number.isFinite(days)||days<1)throw Error("حدد مدة صحيحة.");expiresAt=Date.now()+days*86400000}let updatedAt=Date.now();let durationType=duration==="keep"?"kept":duration;await db.ref("students/"+editingCode).update({studentName:name,name,section,branchId:branchKey(section),maxDevices:max,deviceLimit:max,expiresAt,durationType,durationDays:expiresAt?Math.max(0,Math.round((expiresAt-updatedAt)/86400000)):0,active:editingActive,status:editingActive?"نشط":"موقوف",updatedAt});msg("editMsg","تم حفظ بيانات الكود بنجاح.");$("editCodeLabel").textContent="الكود: "+editingCode+" | تاريخ الانتهاء: "+(expiresAt?new Date(expiresAt).toLocaleString("ar-EG"):"بدون انتهاء");loadCodes()}catch(e){msg("editMsg",e.message||String(e),true)}}
 </script></body></html>
