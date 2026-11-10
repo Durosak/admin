@@ -157,6 +157,15 @@ const db={
   }
   return {
    get:()=>request("GET"),
+   getShallow:async()=>{
+    const shallowUrl=url+(url.includes("?")?"&":"?")+"shallow=true";
+    const response=await fetch(shallowUrl,{method:"GET",cache:"no-store"});
+    const raw=await response.text();
+    let data=null;
+    try{data=raw?JSON.parse(raw):null}catch(_){throw Error("استجابة غير مفهومة من Firebase: "+raw.slice(0,160))}
+    if(!response.ok)throw Error("Firebase HTTP "+response.status+": "+(data?.error||raw||response.statusText));
+    return {val:()=>data,exists:()=>data!==null};
+   },
    set:value=>request("PUT",value),
    update:value=>request("PATCH",value),
    remove:()=>request("DELETE")
@@ -279,7 +288,32 @@ function renderCodes(){
  $("codesStats").textContent=`المعروض: ${filtered.length} من إجمالي ${allCodeRows.length} كود`;
  updateSummary();
 }
-async function loadCodes(){try{msg("listMsg","جارٍ تحميل الأكواد...");let s=await db.ref().get(),o=s.val()||{};allCodeRows=Object.entries(o).filter(([code,x])=>/^\d{9}$/.test(code)&&x&&typeof x==="object"&&!Array.isArray(x)).sort((a,b)=>(Number(b[1]?.createdAt)||0)-(Number(a[1]?.createdAt)||0));renderCodes();msg("listMsg","تم تحميل "+allCodeRows.length+" كود.");}catch(e){console.error("loadCodes failed:",e);msg("listMsg","تعذر تحميل الأكواد: "+e.message,true)}}
+async function loadCodes(){
+ try{
+  msg("listMsg","جارٍ جلب قائمة الأكواد...");
+  // اقرأ أسماء المفاتيح فقط أولًا بدل تنزيل قاعدة البيانات كاملة.
+  const keysSnap=await db.ref().getShallow();
+  const keys=Object.keys(keysSnap.val()||{}).filter(code=>/^\d{9}$/.test(code));
+  allCodeRows=[];
+  const concurrency=8;
+  for(let i=0;i<keys.length;i+=concurrency){
+   const batch=keys.slice(i,i+concurrency);
+   const rows=await Promise.all(batch.map(async code=>{
+    const snap=await db.ref(code).get();
+    const value=snap.val();
+    return value&&typeof value==="object"&&!Array.isArray(value)?[code,value]:null;
+   }));
+   allCodeRows.push(...rows.filter(Boolean));
+   msg("listMsg","جارٍ تحميل بيانات الأكواد... "+allCodeRows.length+" من "+keys.length);
+  }
+  allCodeRows.sort((a,b)=>(Number(b[1]?.createdAt)||0)-(Number(a[1]?.createdAt)||0));
+  renderCodes();
+  msg("listMsg","تم تحميل "+allCodeRows.length+" كود بنجاح.");
+ }catch(e){
+  console.error("loadCodes failed:",e);
+  msg("listMsg","تعذر تحميل الأكواد: "+(e.message||String(e)),true);
+ }
+}
 async function bulkDeactivate(){
  const duration=$("bulkDuration").value,section=$("bulkSection").value;
  if(!duration){msg("bulkMsg","اختر مدة الأكواد أولًا.",true);return}
