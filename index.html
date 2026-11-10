@@ -40,11 +40,16 @@ button:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 9px 
 @media(max-width:850px){.summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:600px){.create-launch,.section-head{align-items:stretch;flex-direction:column}.create-launch button,.section-head>button{width:100%}.search-line{align-items:stretch}.search-line>button{min-width:82px}.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.summary-card{padding:12px}.summary-card strong{font-size:25px}.summary-card small{font-size:10px}}
 
 
-.create-backdrop{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(2,7,18,.78);backdrop-filter:blur(8px);overflow-y:auto}
+.create-backdrop{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(2,7,18,.82);backdrop-filter:blur(7px);overflow:auto;overscroll-behavior:contain}
+.create-modal{overscroll-behavior:contain;scrollbar-gutter:stable}
+#createPanel .actions{position:sticky;bottom:-16px;z-index:5;padding:12px 0;background:linear-gradient(180deg,rgba(13,23,41,.94),#0d1729);border-top:1px solid #263a57}
+#createBtn{min-width:180px;box-shadow:0 8px 24px #3478ed55}
+.create-modal .section-head{top:-16px}
+
 .create-modal{width:min(760px,100%);max-height:calc(100vh - 44px);overflow-y:auto;margin:auto;background:linear-gradient(150deg,#172943,#0a1527);border:1px solid #42618a;box-shadow:0 25px 90px #000b}
 .create-modal .section-head{position:sticky;top:-24px;background:#14243b;padding:8px 0 14px;z-index:2}
 #createPanel .field input,#createPanel .field select{width:100%}
-@media(max-width:600px){.create-backdrop{padding:10px}.create-modal{max-height:calc(100vh - 20px);padding:16px}}
+@media(max-width:600px){.create-backdrop{padding:8px}.create-modal{max-height:calc(100dvh - 16px);padding:14px}#createPanel .actions button{flex:1 1 100%}}
 </style>
 </head>
 <body><main class="wrap">
@@ -55,7 +60,7 @@ button:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 9px 
 </section>
 <section id="app" class="hidden">
 <div class="create-launch panel"><div><h2>إدارة اشتراكات الطلاب</h2><p class="small">أنشئ كودًا جديدًا أو ابحث عن كود وتابع حالة الاشتراكات.</p></div><button type="button" id="openCreateBtn" onclick="toggleCreatePanel(true)">＋ إنشاء كود جديد</button></div>
-<div class="create-backdrop hidden" id="createBackdrop" onclick="if(event.target===this)toggleCreatePanel(false)"><section class="panel create-modal" id="createPanel" role="dialog" aria-modal="true" aria-labelledby="createTitle"><div class="section-head"><div><h1 id="createTitle">إنشاء كود طالب جديد</h1><p class="muted">أدخل بيانات الطالب وحدد مدة الاشتراك والأجهزة المسموح بها.</p></div><button type="button" class="secondary" onclick="toggleCreatePanel(false)">إغلاق ✕</button></div><p class="muted">يُحفظ الكود في المسار <b>students</b> المتوافق مع صفحة تسجيل الدخول الحالية.</p>
+<div class="create-backdrop" id="createBackdrop" style="display:none" aria-hidden="true" onclick="if(event.target===this&&!$('createBtn').disabled)toggleCreatePanel(false)"><section class="panel create-modal" id="createPanel" role="dialog" aria-modal="true" aria-labelledby="createTitle"><div class="section-head"><div><h1 id="createTitle">إنشاء كود طالب جديد</h1><p class="muted">أدخل بيانات الطالب وحدد مدة الاشتراك والأجهزة المسموح بها.</p></div><button type="button" class="secondary" onclick="toggleCreatePanel(false)">إغلاق ✕</button></div><p class="muted">يُحفظ الكود في المسار <b>students</b> المتوافق مع صفحة تسجيل الدخول الحالية.</p>
 <div class="grid">
 <div class="field"><label>اسم الطالب</label><input id="studentName" placeholder="اسم الطالب"></div>
 <div class="field"><label>كود الطالب (9 أرقام)</label><div style="display:flex;gap:8px"><input id="code" inputmode="numeric" maxlength="9" placeholder="اتركه فارغًا للتوليد" onclick="copyGeneratedCode()"><button class="secondary" type="button" onclick="makeCode()">توليد</button></div></div>
@@ -126,7 +131,20 @@ auth.onAuthStateChanged(async user=>{if(!user){$("app").classList.add("hidden");
  if(!allowed){await auth.signOut();msg("loginMsg","هذا الحساب غير مصرح له بإدارة الأكواد.",true);return}
  $("loginPanel").classList.add("hidden");$("app").classList.remove("hidden");$("logout").classList.remove("hidden");loadCodes();
 });
-function toggleCreatePanel(show){const backdrop=$("createBackdrop");backdrop.classList.toggle("hidden",!show);document.body.style.overflow=show?"hidden":"";if(show)setTimeout(()=>$("studentName").focus(),180)}
+function toggleCreatePanel(show){
+ const backdrop=$("createBackdrop");
+ if(show){
+  backdrop.style.display="flex";
+  backdrop.setAttribute("aria-hidden","false");
+  document.body.style.overflow="hidden";
+  $("createPanel").scrollTop=0;
+  setTimeout(()=>{const field=$("studentName");if(field)field.focus({preventScroll:true});},50);
+ }else{
+  backdrop.style.display="none";
+  backdrop.setAttribute("aria-hidden","true");
+  document.body.style.overflow="";
+ }
+}
 function updateSummary(){const now=Date.now();let active=0,expired=0,soon=0,paused=0;allCodeRows.forEach(([code,x])=>{const exp=Number(x.expiresAt||0),isExpired=exp>0&&exp<=now,isPaused=x.active===false&&!isExpired;if(isExpired)expired++;else if(isPaused)paused++;else{active++;if(exp>0&&exp-now<=7*86400000)soon++}});$("sumTotal").textContent=allCodeRows.length;$("sumActive").textContent=active;$("sumSoon").textContent=soon;$("sumExpired").textContent=expired;$("sumPaused").textContent=paused}
 function makeCode(){let n="";for(let i=0;i<9;i++)n+=Math.floor(Math.random()*10);$("code").value=n}
 function toggleCustom(){$("customWrap").classList.toggle("hidden",v("duration")!=="custom")}
@@ -135,7 +153,9 @@ function branchKey(section){return ({"علمي علوم":"science_bio","علمي
 function clearForm(){["studentName","code"].forEach(x=>$(x).value="");$("maxDevices").value=1;$("duration").value="30";$("customDays").value=30;toggleCustom();msg("createMsg","")}
 function formatDate(ts){return new Date(ts).toLocaleDateString("ar-EG",{year:"numeric",month:"long",day:"numeric"});}
 function buildWelcomeMessage(code,data,end){
- const name=data.studentName||data.name||"طالبنا العزيز",section=data.section||"—",type=data.durationType||"";
+ const name=data.studentName||data.name||"طالبنا العزيز";
+ const section=data.section||"—";
+ const type=data.durationType||"";
  let durationText="";
  if(type==="trial30") durationText="🧪 هذا كود تجريبي لمدة نصف ساعة، يبدأ من دلوقتي.";
  else if(type==="30") durationText=`📅 هذا الكود لمدة 30 يومًا من النهارده، وميعاد التجديد بتاعك: ${formatDate(end)}.`;
@@ -143,14 +163,17 @@ function buildWelcomeMessage(code,data,end){
  else if(type==="365") durationText="🌟 هذا كود لمدة سنة كاملة شامل المراجعات النهائية.";
  else if(type==="unlimited") durationText="♾️ هذا الكود بدون تاريخ انتهاء.";
  else {const days=Number(data.durationDays||0);durationText=`📅 مدة الكود ${days} يوم، وميعاد التجديد: ${formatDate(end)}.`;}
- return `🎉 أهلاً بيك في منصة دروسك بلس!\n\n👤 الاسم: ${name}\n📚 الشعبة: ${section}\n🔑 كود الدخول: ${code}\n\n${durationText}\n\n👨‍🏫 كل المدرسين اللي هتشوفهم على المنصة بـ 200 جنيه في الشهر.\n💬 لو حابب تشترك ممكن تبعتلي.\n\n🌐 رابط الدخول للمنصة:\nhttps://www.durosakplus.com/`;
+ const closing=type==="trial30"
+  ?"\\n\\n👨‍🏫 كل المدرسين اللي هتشوفهم على المنصة بـ 200 جنيه في الشهر.\\n💬 لو حابب تشترك ممكن تبعتلي."
+  :"\\n\\n💙 بالتوفيق إن شاء الله، وإحنا موجودين معاك دائمًا.\\n⭐ متنساش تقولنا رأيك في المنصة وتقول لأصحابك.";
+ return `🎉 أهلاً بيك في منصة دروسك بلس!\\n\\n👤 الاسم: ${name}\\n📚 الشعبة: ${section}\\n🔑 كود الدخول: ${code}\\n\\n${durationText}${closing}\\n\\n🌐 رابط الدخول للمنصة:\\nhttps://www.durosakplus.com/`;
 }
 async function copyTextSafe(text){
  try{await navigator.clipboard.writeText(text);return true;}
  catch(e){const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();const ok=document.execCommand("copy");ta.remove();if(!ok)throw e;return true;}
 }
 async function copyGeneratedCode(){const c=v("code");if(c&&/^\d{9}$/.test(c)){try{await copyTextSafe(c);msg("createMsg","📋 تم نسخ الكود: "+c)}catch(e){msg("createMsg","تعذر النسخ تلقائيًا، انسخ الكود يدويًا.",true)}}}
-async function createCode(){let btn=$("createBtn");btn.disabled=true;try{
+async function createCode(){let btn=$("createBtn");if(btn.disabled)return;btn.disabled=true;btn.textContent="جارٍ إنشاء الكود...";try{
  let code=v("code");if(!code){makeCode();code=v("code")}if(!/^\d{9}$/.test(code))throw Error("الكود لازم يكون 9 أرقام.");
  let name=v("studentName");if(!name)throw Error("اكتب اسم الطالب.");
  let max=Number(v("maxDevices"));if(!Number.isInteger(max)||max<1||max>20)throw Error("عدد الأجهزة من 1 إلى 20.");
@@ -165,8 +188,8 @@ async function createCode(){let btn=$("createBtn");btn.disabled=true;try{
  $("code").value="";
  $("studentName").value="";
  toggleCreatePanel(false);
- alert("✅ تم إنشاء الكود ونسخ رسالة الطالب كاملة. افتح تيليجرام والصق الرسالة لإرسالها.");
- }catch(e){msg("createMsg",e.message||String(e),true)}finally{btn.disabled=false}}
+ msg("listMsg","✅ تم إنشاء الكود ونسخ رسالة الطالب كاملة. الصقها في تيليجرام لإرسالها.");
+ }catch(e){msg("createMsg",e.message||String(e),true)}finally{btn.disabled=false;btn.textContent="إنشاء الكود"}}
 function durationLabel(x){const exp=Number(x.expiresAt||0),created=Number(x.createdAt||0);if(!exp)return "بدون انتهاء";if(!created)return "مدة محددة";const ms=exp-created;if(ms<=31*60*1000)return "تجريبي (30 دقيقة)";const days=Math.round(ms/86400000);if(days>=360&&days<=370)return "سنة (365 يومًا)";if(days>=175&&days<=185)return "6 أشهر (180 يومًا)";if(days>=88&&days<=92)return "90 يومًا";if(days>=28&&days<=32)return "شهر (30 يومًا)";const d=new Date(exp);if(d.getFullYear()===2027&&d.getMonth()===0&&d.getDate()===1)return "ترم حتى 1/1/2027";return Math.max(1,days)+" يوم (مخصص)";}
 function remainingLabel(x){const exp=Number(x.expiresAt||0);if(!exp)return {text:"∞ بدون انتهاء",cls:"ok"};const diff=exp-Date.now();if(diff<=0)return {text:"منتهي",cls:"expired"};const days=Math.ceil(diff/86400000);if(days===1&&diff<86400000)return {text:"أقل من يوم",cls:"ok"};return {text:days+" يوم",cls:"ok"};}
 let allCodeRows=[];
