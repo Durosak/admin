@@ -139,7 +139,30 @@ button:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 9px 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
 const firebaseConfig={apiKey:"AIzaSyBfc0ug0Es6GUI7FWqblqEqk_c8lU5Sf-k",authDomain:"plus-f09b5.firebaseapp.com",databaseURL:"https://droskk-461fd-default-rtdb.firebaseio.com",projectId:"plus-f09b5",storageBucket:"plus-f09b5.firebasestorage.app",messagingSenderId:"134730979955",appId:"1:134730979955:web:f2cf35b41460003535a806",measurementId:"G-JYNQ5QNWE6"};
-firebase.initializeApp(firebaseConfig);const db=firebase.database(),auth=firebase.auth();
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+// الاتصال بقاعدة الأكواد الجديدة عبر REST مباشرة لتجنب خلط إعدادات مشروع Firebase القديم
+// مع قاعدة البيانات الجديدة. يتطلب ذلك قواعد قراءة/كتابة تسمح بالوصول (كما في صورة Rules).
+const DB_URL="https://droskk-461fd-default-rtdb.firebaseio.com";
+const db={
+ ref(path=""){
+  const clean=String(path||"").replace(/^\/+|\/+$/g,"");
+  const url=DB_URL+(clean?"/"+clean.split("/").map(encodeURIComponent).join("/"):"")+".json";
+  async function request(method="GET",body){
+   const response=await fetch(url,{method,headers:body===undefined?{}:{"Content-Type":"application/json"},body:body===undefined?undefined:JSON.stringify(body),cache:"no-store"});
+   const raw=await response.text();
+   let data=null;try{data=raw?JSON.parse(raw):null}catch(_){throw Error("استجابة غير مفهومة من Firebase: "+raw.slice(0,160))}
+   if(!response.ok)throw Error("Firebase HTTP "+response.status+": "+(data?.error||raw||response.statusText));
+   return {val:()=>data,exists:()=>data!==null};
+  }
+  return {
+   get:()=>request("GET"),
+   set:value=>request("PUT",value),
+   update:value=>request("PATCH",value),
+   remove:()=>request("DELETE")
+  };
+ }
+};
 const $=id=>document.getElementById(id),v=id=>$(id).value.trim();
 const ADMIN_USERNAME="plus";
 const ADMIN_AUTH_EMAIL="plus@admin.dorosak.com";
@@ -256,7 +279,7 @@ function renderCodes(){
  $("codesStats").textContent=`المعروض: ${filtered.length} من إجمالي ${allCodeRows.length} كود`;
  updateSummary();
 }
-async function loadCodes(){try{msg("listMsg","جارٍ تحميل الأكواد...");let s=await db.ref().get(),o=s.val()||{};allCodeRows=Object.entries(o).sort((a,b)=>(b[1]?.createdAt||0)-(a[1]?.createdAt||0));renderCodes();msg("listMsg","تم تحميل "+allCodeRows.length+" كود.");}catch(e){msg("listMsg","تعذر تحميل الأكواد: "+e.message,true)}}
+async function loadCodes(){try{msg("listMsg","جارٍ تحميل الأكواد...");let s=await db.ref().get(),o=s.val()||{};allCodeRows=Object.entries(o).filter(([code,x])=>/^\d{9}$/.test(code)&&x&&typeof x==="object"&&!Array.isArray(x)).sort((a,b)=>(Number(b[1]?.createdAt)||0)-(Number(a[1]?.createdAt)||0));renderCodes();msg("listMsg","تم تحميل "+allCodeRows.length+" كود.");}catch(e){console.error("loadCodes failed:",e);msg("listMsg","تعذر تحميل الأكواد: "+e.message,true)}}
 async function bulkDeactivate(){
  const duration=$("bulkDuration").value,section=$("bulkSection").value;
  if(!duration){msg("bulkMsg","اختر مدة الأكواد أولًا.",true);return}
